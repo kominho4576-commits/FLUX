@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e0f11">
+<title>FLUX</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;--surface3:#252830;
+  --border:#2a2d35;--border2:#3a3d47;--border3:#4a4d57;
+  --p1:#f05a00;--p1d:#7a2d00;--p1l:rgba(240,90,0,.12);
+  --p2:#0096cc;--p2d:#004466;--p2l:rgba(0,150,204,.12);
+  --text:#e8eaf0;--muted:#5a5f6e;--dim:#3a3d47;
+  --ok:#4ade80;--err:#f87171;--warn:#facc15;
+  --cs:56px;--cgap:5px;--cp:10px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+  --radius:10px;--radius-sm:6px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans KR',sans-serif;user-select:none;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center}
+
+/* ─── GRAIN OVERLAY ─── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.025;pointer-events:none;z-index:0}
+
+/* ─── SCREENS ─── */
+.screen{display:none;width:100vw;height:100vh;height:100dvh;flex-direction:column;align-items:center;justify-content:center;position:relative;z-index:1;padding:max(24px,var(--safe-t)) max(20px,var(--safe-l)) max(24px,var(--safe-b)) max(20px,var(--safe-r));gap:12px;overflow-y:auto}
+.screen.active{display:flex}
+.screen-inner{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:340px}
+
+/* ─── MENU ─── */
+.menu-logo{font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,20vw,9rem);line-height:.88;color:var(--text);letter-spacing:.06em;text-align:center;position:relative}
+.menu-logo span{color:var(--p1)}
+.menu-logo-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(240,90,0,.08) 0%,transparent 70%);pointer-events:none}
+.menu-tag{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.28em;text-transform:uppercase;margin-bottom:4px;text-align:center}
+.menu-list{display:flex;flex-direction:column;gap:7px;width:100%}
+.mitem{display:flex;align-items:center;gap:14px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s,transform .1s;background:var(--surface);position:relative;overflow:hidden}
+.mitem::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 60%,rgba(255,255,255,.015));pointer-events:none}
+.mitem:hover{border-color:var(--border2);background:var(--surface2)}
+.mitem:active{transform:scale(.975)}
+.mitem-num{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--muted);width:20px;flex-shrink:0}
+.mitem-label{font-size:.88rem;font-weight:700;letter-spacing:.02em}
+.mitem-sub{font-size:.66rem;color:var(--muted);margin-top:2px}
+.mitem.hi{border-color:var(--p1);background:var(--p1l)}
+.mitem.hi .mitem-num{color:var(--p1)}
+.mitem.hi::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--p1)}
+.menu-ver{font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--dim);letter-spacing:.1em;margin-top:4px}
+
+/* ─── NICKNAME SCREEN ─── */
+.nick-wrap{width:100%;display:flex;flex-direction:column;gap:14px}
+.nick-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.1em;color:var(--text);text-align:center}
+.nick-sub{font-size:.72rem;color:var(--muted);text-align:center;margin-top:-8px}
+.field-group{display:flex;flex-direction:column;gap:6px}
+.field-label{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.field-input{width:100%;padding:13px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:'IBM Plex Sans KR',sans-serif;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s,box-shadow .15s}
+.field-input:focus{border-color:var(--p1);box-shadow:0 0 0 3px rgba(240,90,0,.12)}
+.field-input::placeholder{color:var(--dim);font-weight:400}
+.pri-btn{width:100%;padding:14px;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:700;letter-spacing:.12em;transition:all .15s;background:var(--p1);color:#fff;position:relative;overflow:hidden}
+.pri-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.08) 0%,transparent 50%)}
+.pri-btn:hover{background:#d44f00;transform:translateY(-1px);box-shadow:0 4px 16px rgba(240,90,0,.3)}
+.pri-btn:active{transform:translateY(0);box-shadow:none}
+.back-link{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--muted);cursor:pointer;letter-spacing:.1em;padding:8px 4px;display:flex;align-items:center;gap:6px;align-self:flex-start}
+.back-link:hover{color:var(--text)}
+
+/* ─── AI DIFFICULTY ─── */
+.diff-wrap{width:100%;display:flex;flex-direction:column;gap:8px}
+.section-heading{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px}
+.ditem{display:flex;align-items:center;gap:14px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;cursor:pointer;transition:all .15s;background:var(--surface)}
+.ditem:hover{border-color:var(--border2);background:var(--surface2)}
+.ditem:active{transform:scale(.975)}
+.ditem-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.ditem.easy .ditem-dot{background:var(--ok)}
+.ditem.normal .ditem-dot{background:var(--warn)}
+.ditem.hard .ditem-dot{background:var(--err)}
+.ditem-label{font-size:.88rem;font-weight:700}
+.ditem-sub{font-size:.65rem;color:var(--muted);margin-top:2px}
+
+/* ─── TUTORIAL SCREEN ─── */
+.tut-wrap{width:100%;display:flex;flex-direction:column;gap:0}
+.tut-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.tut-title{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.1em}
+.tut-pages{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--muted)}
+.tut-slide{display:none;flex-direction:column;gap:12px;animation:fadeSlide .25s ease}
+.tut-slide.active{display:flex}
+@keyframes fadeSlide{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.tut-big{font-size:3.5rem;text-align:center;line-height:1}
+.tut-headline{font-size:1rem;font-weight:700;text-align:center;color:var(--text)}
+.tut-body{font-size:.82rem;color:var(--muted);line-height:1.65;text-align:center}
+.tut-visual{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.tut-mini-board{display:grid;grid-template-columns:repeat(4,32px);gap:3px;padding:8px;background:var(--surface2);border-radius:6px}
+.tut-cell{width:32px;height:32px;border-radius:4px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.tut-stone{width:20px;height:20px;border-radius:50%}
+.tut-stone.p1{background:var(--p1)}
+.tut-stone.p2{background:var(--p2)}
+.tut-stone.win{animation:wf .6s ease infinite alternate}
+.tut-nav{display:flex;gap:8px;align-items:center;margin-top:6px}
+.tut-nav-btn{flex:1;padding:12px;border-radius:var(--radius-sm);font-family:'IBM Plex Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .15s;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
+.tut-nav-btn:hover{border-color:var(--border2);color:var(--text)}
+.tut-nav-btn.pri{background:var(--p1);color:#fff;border-color:var(--p1)}
+.tut-nav-btn.pri:hover{background:#d44f00}
+.tut-dots{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:2px}
+.tut-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .2s}
+.tut-dot.active{background:var(--p1);width:18px;border-radius:3px}
+
+/* ─── LOBBY ─── */
+.lobby-wrap{width:100%;display:flex;flex-direction:column;gap:10px}
+.lobby-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:10px}
+.lobby-label{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
+.lobby-code-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center;position:relative}
+.lobby-code{font-family:'IBM Plex Mono',monospace;font-size:2rem;font-weight:700;color:var(--text);letter-spacing:.25em}
+.lobby-code-hint{font-size:.62rem;color:var(--muted);margin-top:4px}
+.lobby-copy-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted);cursor:pointer;transition:all .15s}
+.lobby-copy-btn:hover{border-color:var(--border2);color:var(--text)}
+.lobby-copy-btn.copied{color:var(--ok);border-color:var(--ok)}
+.lobby-or{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--dim);margin:2px 0}
+.lobby-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:1rem;font-family:'IBM Plex Mono',monospace;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s,box-shadow .15s;letter-spacing:.15em;text-transform:uppercase}
+.lobby-input:focus{border-color:var(--p1);box-shadow:0 0 0 3px rgba(240,90,0,.1)}
+.lobby-input::placeholder{text-transform:none;letter-spacing:0;color:var(--muted);font-size:.78rem}
+.lobby-btn{width:100%;padding:13px;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.8rem;font-weight:700;letter-spacing:.12em;transition:all .15s}
+.lobby-btn.pri{background:var(--p1);color:#fff}
+.lobby-btn.pri:hover{background:#d44f00}
+.lobby-btn:active{transform:scale(.975)}
+.lobby-status{font-family:'IBM Plex Mono',monospace;font-size:.68rem;text-align:center;min-height:18px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.lobby-status.ok{color:var(--ok)}.lobby-status.err{color:var(--err)}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.conn-dot.pulse{background:var(--warn);animation:pulse 1.2s ease infinite}
+.conn-dot.ok{background:var(--ok)}
+.conn-dot.err{background:var(--err)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+
+/* ─── GAME ─── */
+.app{display:flex;flex-direction:column;align-items:center;width:100vw;height:100vh;height:100dvh;padding:max(clamp(6px,1.5vh,12px),var(--safe-t)) max(clamp(8px,2vw,16px),var(--safe-r)) max(clamp(6px,1.5vh,12px),var(--safe-b)) max(clamp(8px,2vw,16px),var(--safe-l));gap:clamp(4px,1vh,8px)}
+.ghead{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:500px}
+.glogo{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.4rem,4.5vw,2rem);color:var(--text);letter-spacing:.08em}
+.glogo span{color:var(--p1)}
+.ghead-right{display:flex;align-items:center;gap:6px}
+.ghost-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 11px;font-size:.68rem;color:var(--muted);cursor:pointer;font-family:'IBM Plex Mono',monospace;transition:all .15s;letter-spacing:.06em}
+.ghost-btn:hover{border-color:var(--border2);color:var(--text)}
+.ghost-btn:active{transform:scale(.95)}
+
+/* conn status badge */
+.conn-badge{display:flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted)}
+.conn-badge .bdot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.conn-badge .bdot.warn{background:var(--warn);animation:pulse 1s ease infinite}
+.conn-badge .bdot.err{background:var(--err)}
+
+.sbar{width:100%;max-width:500px;display:flex;gap:6px;align-items:stretch}
+.pcard{flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);transition:border-color .2s,background .2s;position:relative;overflow:hidden;min-width:0}
+.pcard.active{border-color:var(--border2);background:var(--surface2)}
+.pcard.active::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:currentColor}
+.pcard.p1.active{color:var(--p1)}
+.pcard.p2.active{color:var(--p2)}
+.pcard.p1.active::after{background:var(--p1)}
+.pcard.p2.active::after{background:var(--p2)}
+.pdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;opacity:.6}
+.pcard.active .pdot{opacity:1}
+.p1 .pdot{background:var(--p1)}
+.p2 .pdot{background:var(--p2)}
+.pinfo{flex:1;min-width:0}
+.pname{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--muted);letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plabel{font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.ptag{font-family:'IBM Plex Mono',monospace;font-size:.5rem;padding:2px 6px;border-radius:2px;letter-spacing:.05em;flex-shrink:0}
+.p1.active .ptag{background:rgba(240,90,0,.15);color:var(--p1)}
+.p2.active .ptag{background:rgba(0,150,204,.15);color:var(--p2)}
+.vsep{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--dim);align-self:center}
+.pcard .ping-tag{font-family:'IBM Plex Mono',monospace;font-size:.48rem;color:var(--muted);margin-top:2px}
+
+/* phase */
+.phasebar{display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:clamp(.5rem,1.2vw,.62rem);color:var(--muted)}
+.pstep{padding:3px 9px;border-radius:3px;border:1px solid var(--border);white-space:nowrap;transition:all .2s}
+.pstep.active{border-color:var(--p1);background:rgba(240,90,0,.08);color:var(--p1)}
+.pstep.done{opacity:.25;text-decoration:line-through}
+.parrow{color:var(--dim)}
+
+/* rotation */
+.rotrow{display:flex;align-items:center;gap:clamp(8px,3vw,20px)}
+.rbtn{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:clamp(8px,2vw,12px) clamp(16px,4vw,28px);cursor:pointer;transition:all .15s;color:var(--text);font-family:'IBM Plex Sans KR',sans-serif;position:relative;overflow:hidden}
+.rbtn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 60%,rgba(255,255,255,.02))}
+.rbtn:hover:not(.off){border-color:var(--border2);background:var(--surface2)}
+.rbtn:active:not(.off){transform:scale(.94)}
+.rbtn.off{opacity:.2;pointer-events:none}
+.ricon{font-size:clamp(1.1rem,3.5vw,1.6rem);line-height:1}
+.rlbl{font-size:clamp(.46rem,1.1vw,.56rem);color:var(--muted);letter-spacing:.06em;white-space:nowrap}
+
+/* board */
+.board-area{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;min-height:0;overflow:hidden}
+.dzone{display:flex;gap:var(--cgap);margin-bottom:4px}
+.darr{width:var(--cs);height:clamp(18px,3.2vh,26px);display:flex;align-items:center;justify-content:center;font-size:clamp(.7rem,2vw,.85rem);cursor:pointer;border-radius:3px;border:1px solid transparent;transition:all .12s;color:var(--muted)}
+.darr:hover:not(.off){color:var(--p1);border-color:rgba(240,90,0,.3);background:rgba(240,90,0,.05)}
+.darr:active:not(.off){transform:scale(.9)}
+.darr.off{pointer-events:none;opacity:.15}
+.bwrap{position:relative}
+.bwrap.rl{animation:rl .45s cubic-bezier(.4,0,.2,1) forwards}
+.bwrap.rr{animation:rr .45s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes rl{from{transform:rotate(0)}to{transform:rotate(-90deg)}}
+@keyframes rr{from{transform:rotate(0)}to{transform:rotate(90deg)}}
+.board{display:grid;grid-template-columns:repeat(6,var(--cs));gap:var(--cgap);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:var(--cp);position:relative}
+.cell{width:var(--cs);height:var(--cs);border-radius:4px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative;overflow:visible;transition:border-color .1s,background .1s}
+.cell.ch{border-color:rgba(240,90,0,.35);background:rgba(240,90,0,.04)}
+.stone{width:calc(var(--cs)*.68);height:calc(var(--cs)*.68);border-radius:50%;position:relative;z-index:2;flex-shrink:0}
+.stone.p1{background:radial-gradient(circle at 35% 35%,#ff7a30,var(--p1) 55%,#8a3300);box-shadow:inset 0 -2px 5px rgba(0,0,0,.45),inset 0 1px 3px rgba(255,200,150,.3),0 2px 6px rgba(240,90,0,.3)}
+.stone.p2{background:radial-gradient(circle at 35% 35%,#40b8e8,var(--p2) 55%,#003a55);box-shadow:inset 0 -2px 5px rgba(0,0,0,.45),inset 0 1px 3px rgba(180,230,255,.3),0 2px 6px rgba(0,150,204,.3)}
+.stone.preview{opacity:.28}
+.stone.wf{animation:wf .5s ease infinite alternate}
+@keyframes wf{from{transform:scale(1)}to{transform:scale(1.2);filter:brightness(1.6)}}
+.fly{position:absolute;border-radius:50%;z-index:50;pointer-events:none}
+.fly.p1{background:radial-gradient(circle at 35% 35%,#ff7a30,var(--p1) 55%,#8a3300);box-shadow:0 2px 6px rgba(240,90,0,.4)}
+.fly.p2{background:radial-gradient(circle at 35% 35%,#40b8e8,var(--p2) 55%,#003a55);box-shadow:0 2px 6px rgba(0,150,204,.4)}
+
+.msg{font-family:'IBM Plex Mono',monospace;font-size:clamp(.54rem,1.4vw,.7rem);color:var(--muted);text-align:center;min-height:16px;padding:0 8px}
+.msg.w{color:#fb923c}
+.otag{font-family:'IBM Plex Mono',monospace;font-size:.56rem;padding:2px 7px;border-radius:2px;background:rgba(74,222,128,.1);color:var(--ok);letter-spacing:.06em}
+.aitag{font-family:'IBM Plex Mono',monospace;font-size:.56rem;padding:2px 7px;border-radius:2px;background:rgba(240,90,0,.1);color:var(--p1);letter-spacing:.06em}
+
+/* ─── WIN OVERLAY ─── */
+#cc{position:fixed;inset:0;z-index:9998;pointer-events:none}
+.wo{position:fixed;inset:0;background:rgba(14,15,17,.88);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .35s;padding:20px}
+.wo.show{opacity:1;pointer-events:all}
+.wcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:clamp(28px,6vw,48px) clamp(28px,7vw,48px);text-align:center;transform:scale(.85);transition:transform .35s cubic-bezier(.34,1.56,.64,1);width:min(340px,100%);z-index:10000;position:relative;overflow:hidden}
+.wcard::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 50%,rgba(255,255,255,.02));pointer-events:none}
+.wo.show .wcard{transform:scale(1)}
+.wemoji{font-size:clamp(2rem,8vw,3.2rem);margin-bottom:8px}
+.wtag{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.wname{font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,7vw,3rem);margin-bottom:4px;letter-spacing:.06em}
+.wsub{font-size:.78rem;color:var(--muted);margin-bottom:8px;line-height:1.5}
+.wbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.wb{border-radius:var(--radius-sm);padding:11px 22px;font-family:'IBM Plex Mono',monospace;font-size:.74rem;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .15s;border:none}
+.wb.pri{background:var(--p1);color:#fff}
+.wb.pri:hover{background:#d44f00}
+.wb.sec{background:none;border:1px solid var(--border);color:var(--muted)}
+.wb.sec:hover{border-color:var(--border2);color:var(--text)}
+.wb:active{transform:scale(.95)}
+
+/* ─── TOAST ─── */
+.toast-wrap{position:fixed;bottom:max(24px,var(--safe-b));left:50%;transform:translateX(-50%);z-index:20000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 18px;white-space:nowrap;opacity:0;transform:translateY(8px);transition:all .2s;letter-spacing:.04em}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{border-color:rgba(248,113,113,.4);color:var(--err)}
+.toast.ok{border-color:rgba(74,222,128,.4);color:var(--ok)}
+
+/* AI thinking */
+.ai-thinking{position:fixed;inset:0;background:rgba(14,15,17,.5);display:none;align-items:center;justify-content:center;z-index:8000}
+.ai-thinking.show{display:flex}
+.ai-chip{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px}
+.ai-spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--p1);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.ai-label{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--muted);letter-spacing:.08em}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── RECONNECT OVERLAY ─── */
+.reconn-overlay{position:fixed;inset:0;background:rgba(14,15,17,.92);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:15000;flex-direction:column;gap:14px}
+.reconn-overlay.show{display:flex}
+.reconn-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;max-width:280px}
+.reconn-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--p1);border-radius:50%;animation:spin .8s linear infinite}
+.reconn-title{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--text);letter-spacing:.1em}
+.reconn-sub{font-size:.7rem;color:var(--muted)}
+.reconn-abort{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--muted);cursor:pointer;padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);transition:all .15s}
+.reconn-abort:hover{border-color:var(--err);color:var(--err)}
+
+/* Scroll fix for small screens */
+@media(max-height:600px){
+  .screen{padding-top:max(8px,var(--safe-t));padding-bottom:max(8px,var(--safe-b));justify-content:flex-start;overflow-y:auto}
+  .screen-inner{padding:8px 0}
+}
+</style>
+</head>
+<body>
+
+<!-- ─── MENU ─── -->
+<div class="screen active" id="sMenu">
+  <div class="screen-inner">
+    <div style="position:relative">
+      <div class="menu-logo">FL<span>U</span>X<div class="menu-logo-glow"></div></div>
+    </div>
+    <div class="menu-tag">중력 보드게임 — 4목 달성</div>
+    <div class="menu-list">
+      <div class="mitem hi" id="btnLocal">
+        <div class="mitem-num">01</div>
+        <div><div class="mitem-label">로컬 대전</div><div class="mitem-sub">같은 기기에서 2인 플레이</div></div>
+      </div>
+      <div class="mitem" id="btnAIOpen">
+        <div class="mitem-num">02</div>
+        <div><div class="mitem-label">AI 대전</div><div class="mitem-sub">컴퓨터와 대결</div></div>
+      </div>
+      <div class="mitem" id="btnOnlineMenu">
+        <div class="mitem-num">03</div>
+        <div><div class="mitem-label">온라인 대전</div><div class="mitem-sub">코드로 친구와 실시간</div></div>
+      </div>
+      <div class="mitem" id="btnTutorial">
+        <div class="mitem-num">04</div>
+        <div><div class="mitem-label">게임 방법</div><div class="mitem-sub">규칙과 전략 안내</div></div>
+      </div>
+    </div>
+    <div class="menu-ver">v2.0 · FLUX</div>
+  </div>
+</div>
+
+<!-- ─── NICKNAME (Local) ─── -->
+<div class="screen" id="sNickLocal">
+  <div class="screen-inner">
+    <div class="nick-title">로컬 대전</div>
+    <div class="nick-sub">두 플레이어의 이름을 입력하세요</div>
+    <div class="nick-wrap">
+      <div class="field-group">
+        <div class="field-label" style="color:var(--p1)">● 오렌지 플레이어</div>
+        <input class="field-input" id="nick1" placeholder="플레이어 1" maxlength="12" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <div class="field-label" style="color:var(--p2)">● 블루 플레이어</div>
+        <input class="field-input" id="nick2" placeholder="플레이어 2" maxlength="12" autocomplete="off">
+      </div>
+      <button class="pri-btn" id="btnStartLocal">시작하기 →</button>
+      <div class="back-link" id="btnNickLocalBack">← 뒤로</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── NICKNAME (AI) ─── -->
+<div class="screen" id="sNickAI">
+  <div class="screen-inner">
+    <div class="nick-title">AI 대전</div>
+    <div class="nick-sub">닉네임을 입력하고 난이도를 선택하세요</div>
+    <div class="nick-wrap">
+      <div class="field-group">
+        <div class="field-label" style="color:var(--p1)">● 내 닉네임</div>
+        <input class="field-input" id="nickAI" placeholder="플레이어" maxlength="12" autocomplete="off">
+      </div>
+      <div class="diff-wrap">
+        <div class="section-heading">난이도 선택</div>
+        <div class="ditem easy" id="btnEasy"><div class="ditem-dot"></div><div><div class="ditem-label">쉬움</div><div class="ditem-sub">AI가 가끔 실수합니다</div></div></div>
+        <div class="ditem normal" id="btnNormal"><div class="ditem-dot"></div><div><div class="ditem-label">보통</div><div class="ditem-sub">적절한 도전</div></div></div>
+        <div class="ditem hard" id="btnHard"><div class="ditem-dot"></div><div><div class="ditem-label">어려움</div><div class="ditem-sub">최대 깊이 탐색</div></div></div>
+      </div>
+      <div class="back-link" id="btnNickAIBack">← 뒤로</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TUTORIAL ─── -->
+<div class="screen" id="sTutorial">
+  <div class="screen-inner">
+    <div class="tut-wrap">
+      <div class="tut-header">
+        <div class="tut-title">게임 방법</div>
+        <div class="tut-pages" id="tutPages">1 / 4</div>
+      </div>
+
+      <!-- Slide 1: Goal -->
+      <div class="tut-slide active" id="ts0">
+        <div class="tut-big">🎯</div>
+        <div class="tut-headline">목표: 4목 만들기</div>
+        <div class="tut-body">같은 색 돌을 가로, 세로, 대각선으로 <strong>4개 연속</strong> 배치하면 승리합니다.</div>
+        <div class="tut-visual">
+          <div class="tut-mini-board" id="tutBoard1"></div>
+        </div>
+        <div class="tut-body">6×6 보드에서 차례대로 돌을 떨어뜨리세요.</div>
+      </div>
+
+      <!-- Slide 2: Drop -->
+      <div class="tut-slide" id="ts1">
+        <div class="tut-big">⬇️</div>
+        <div class="tut-headline">①  낙하 페이즈</div>
+        <div class="tut-body">원하는 열 위의 <strong>▼ 화살표</strong>를 눌러 돌을 떨어뜨립니다.<br>돌은 중력에 의해 가장 아래 빈칸에 놓입니다.</div>
+        <div class="tut-visual" style="flex-direction:column;gap:6px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--p1);letter-spacing:.1em">▼ &nbsp; ▼ &nbsp; ▼ &nbsp; ▼ &nbsp; ▼ &nbsp; ▼</div>
+          <div style="display:flex;gap:4px">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell"><div class="tut-stone p2"></div></div>
+              <div class="tut-cell"><div class="tut-stone p1"></div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell"><div class="tut-stone p2"></div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell" style="opacity:.3"></div>
+              <div class="tut-cell"><div class="tut-stone p1"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tut-body">첫 번째 턴에는 회전 없이 바로 낙하만 합니다.</div>
+      </div>
+
+      <!-- Slide 3: Rotation -->
+      <div class="tut-slide" id="ts2">
+        <div class="tut-big">↺</div>
+        <div class="tut-headline">②  회전 페이즈</div>
+        <div class="tut-body">낙하 후 다음 차례가 시작되면 보드 전체를 <strong>좌/우로 90° 회전</strong>할 수 있습니다.<br>회전 후 돌들은 새 중력 방향으로 다시 떨어집니다.</div>
+        <div class="tut-visual" style="gap:16px">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--muted);text-align:center;margin-bottom:4px">회전 전</div>
+            <div class="tut-mini-board">
+              <div class="tut-cell"></div><div class="tut-cell"></div><div class="tut-cell"></div><div class="tut-cell"></div>
+              <div class="tut-cell"></div><div class="tut-cell"><div class="tut-stone p1"></div></div><div class="tut-cell"></div><div class="tut-cell"></div>
+              <div class="tut-cell"></div><div class="tut-cell"><div class="tut-stone p2"></div></div><div class="tut-cell"><div class="tut-stone p1"></div></div><div class="tut-cell"></div>
+              <div class="tut-cell"><div class="tut-stone p2"></div></div><div class="tut-cell"><div class="tut-stone p2"></div></div><div class="tut-cell"><div class="tut-stone p1"></div></div><div class="tut-cell"><div class="tut-stone p1"></div></div>
+            </div>
+          </div>
+          <div style="font-size:1.2rem;color:var(--p1)">→</div>
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--muted);text-align:center;margin-bottom:4px">우회전 후</div>
+            <div class="tut-mini-board">
+              <div class="tut-cell"></div><div class="tut-cell"></div><div class="tut-cell"></div><div class="tut-cell"></div>
+              <div class="tut-cell"></div><div class="tut-cell"></div><div class="tut-cell"><div class="tut-stone p2"></div></div><div class="tut-cell"><div class="tut-stone p2"></div></div>
+              <div class="tut-cell"></div><div class="tut-cell"></div><div class="tut-cell"><div class="tut-stone p1"></div></div><div class="tut-cell"><div class="tut-stone p2"></div></div>
+              <div class="tut-cell"></div><div class="tut-cell"></div><div class="tut-cell"><div class="tut-stone p1"></div></div><div class="tut-cell"><div class="tut-stone p1"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tut-body">순서: 회전(선택) → 낙하 → 다음 플레이어 회전(선택) → 낙하…</div>
+      </div>
+
+      <!-- Slide 4: Tips -->
+      <div class="tut-slide" id="ts3">
+        <div class="tut-big">💡</div>
+        <div class="tut-headline">전략 팁</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
+            <div style="font-size:.78rem;font-weight:700;margin-bottom:3px">↺ 회전을 무기로</div>
+            <div class="tut-body" style="text-align:left">상대 돌을 흩뜨리거나, 내 돌이 유리한 위치로 이동하도록 회전 방향을 선택하세요.</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
+            <div style="font-size:.78rem;font-weight:700;margin-bottom:3px">⚠️ 이중 위협</div>
+            <div class="tut-body" style="text-align:left">두 방향으로 동시에 4목이 가능한 상황을 만들면 상대가 막기 어렵습니다.</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
+            <div style="font-size:.78rem;font-weight:700;margin-bottom:3px">🎯 중앙 장악</div>
+            <div class="tut-body" style="text-align:left">가운데 열을 먼저 점령하면 여러 방향으로 4목을 노릴 수 있습니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tut-dots" id="tutDots"></div>
+      <div class="tut-nav">
+        <button class="tut-nav-btn" id="tutPrev">← 이전</button>
+        <button class="tut-nav-btn pri" id="tutNext">다음 →</button>
+      </div>
+      <div class="back-link" id="btnTutBack" style="align-self:center">← 메뉴로</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ONLINE LOBBY ─── -->
+<div class="screen" id="sOnline">
+  <div class="screen-inner">
+    <div class="lobby-wrap">
+      <div class="lobby-card">
+        <div class="field-group">
+          <div class="lobby-label">내 닉네임</div>
+          <input class="field-input" id="nickOnline" placeholder="닉네임 입력" maxlength="12" autocomplete="off" style="padding:11px 13px">
+        </div>
+      </div>
+      <div class="lobby-card">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="lobby-label">방 만들기</div>
+          <span class="back-link" id="btnLeaveOnline" style="margin:0;align-self:auto">← 뒤로</span>
+        </div>
+        <div class="lobby-code-box">
+          <div class="lobby-code" id="myCode">----</div>
+          <div class="lobby-code-hint">친구에게 이 코드를 알려주세요</div>
+          <button class="lobby-copy-btn" id="btnCopyCode">복사</button>
+        </div>
+        <div class="lobby-status" id="hostStatus">
+          <div class="conn-dot pulse" id="hostDot"></div>
+          <span>연결 준비 중...</span>
+        </div>
+      </div>
+      <div class="lobby-or">── 또는 코드로 참가 ──</div>
+      <div class="lobby-card">
+        <div class="lobby-label">방 참가하기</div>
+        <input class="lobby-input" id="joinInput" placeholder="코드 입력 (예: A1B2C3)" maxlength="6">
+        <button class="lobby-btn pri" id="btnJoin">접속하기</button>
+        <div class="lobby-status" id="joinStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── GAME ─── -->
+<div class="screen" id="sGame">
+  <div class="app" id="app">
+    <div class="ghead">
+      <div class="glogo">FL<span>U</span>X</div>
+      <div class="ghead-right">
+        <div class="conn-badge" id="connBadge" style="display:none">
+          <div class="bdot" id="connBdot"></div>
+          <span id="connLabel">ONLINE</span>
+        </div>
+        <span id="modeTag"></span>
+        <button class="ghost-btn" id="btnGoMenu">← 메뉴</button>
+      </div>
+    </div>
+    <div class="sbar">
+      <div class="pcard p1 active" id="card1">
+        <div class="pdot"></div>
+        <div class="pinfo">
+          <div class="pname" id="p1name">PLAYER 1</div>
+          <div class="plabel" id="p1label">오렌지</div>
+        </div>
+        <div class="ptag" id="badge1">TURN</div>
+      </div>
+      <div class="vsep">VS</div>
+      <div class="pcard p2" id="card2">
+        <div class="pdot"></div>
+        <div class="pinfo">
+          <div class="pname" id="p2name">PLAYER 2</div>
+          <div class="plabel" id="p2label">블루</div>
+        </div>
+        <div class="ptag" id="badge2">TURN</div>
+      </div>
+    </div>
+    <div class="phasebar">
+      <div class="pstep" id="ph1">① 회전</div>
+      <div class="parrow">›</div>
+      <div class="pstep active" id="ph2">② 낙하</div>
+    </div>
+    <div class="rotrow">
+      <button class="rbtn off" id="btnLeft"><span class="ricon">↺</span><span class="rlbl">왼쪽</span></button>
+      <button class="rbtn off" id="btnRight"><span class="ricon">↻</span><span class="rlbl">오른쪽</span></button>
+    </div>
+    <div class="board-area">
+      <div class="dzone" id="dzone"></div>
+      <div class="bwrap" id="bwrap"><div class="board" id="board"></div></div>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+
+<!-- WIN -->
+<canvas id="cc"></canvas>
+<div class="wo" id="wo">
+  <div class="wcard">
+    <div class="wemoji" id="wemoji">🎉</div>
+    <div class="wtag">WINNER</div>
+    <div class="wname" id="wname"></div>
+    <div class="wsub" id="wsub"></div>
+    <div class="wbtns">
+      <button class="wb pri" id="wRestart">다시 시작</button>
+      <button class="wb sec" id="wMenu">메뉴로</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI thinking indicator -->
+<div class="ai-thinking" id="aiThink">
+  <div class="ai-chip">
+    <div class="ai-spinner"></div>
+    <div class="ai-label">AI 생각 중...</div>
+  </div>
+</div>
+
+<!-- Reconnect overlay -->
+<div class="reconn-overlay" id="reconnOverlay">
+  <div class="reconn-card">
+    <div class="reconn-spinner"></div>
+    <div class="reconn-title">재연결 시도 중...</div>
+    <div class="reconn-sub" id="reconnSub">상대방과 연결이 끊겼습니다</div>
+    <div class="reconn-abort" id="reconnAbort">포기하고 메뉴로</div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+const ROWS=6,COLS=6;
+let grid=[],cur=1,phase='drop';
+let over=false,winC=[],anim=false,firstTurn=true;
+let online=false,role=null;
+let vsAI=false,aiDiff='normal';
+let myNick='나',oppNick='상대';
+let connHealth={ping:0,lastPong:0,timer:null};
+let reconnAttempts=0,maxReconn=5,reconnTimer=null;
+let pendingGameState=null; // for sync on reconnect
+
+// ══════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+document.getElementById('btnLocal').addEventListener('click',()=>show('sNickLocal'));
+document.getElementById('btnAIOpen').addEventListener('click',()=>show('sNickAI'));
+document.getElementById('btnOnlineMenu').addEventListener('click',openLobby);
+document.getElementById('btnTutorial').addEventListener('click',openTutorial);
+document.getElementById('btnNickLocalBack').addEventListener('click',()=>show('sMenu'));
+document.getElementById('btnNickAIBack').addEventListener('click',()=>show('sMenu'));
+document.getElementById('btnLeaveOnline').addEventListener('click',()=>{discPeer();show('sMenu');});
+document.getElementById('btnJoin').addEventListener('click',joinGame);
+document.getElementById('btnGoMenu').addEventListener('click',goMenu);
+document.getElementById('btnLeft').addEventListener('click',()=>hRot('left'));
+document.getElementById('btnRight').addEventListener('click',()=>hRot('right'));
+document.getElementById('wRestart').addEventListener('click',restartGame);
+document.getElementById('wMenu').addEventListener('click',goMenu);
+document.getElementById('btnStartLocal').addEventListener('click',()=>{
+  const n1=document.getElementById('nick1').value.trim()||'플레이어 1';
+  const n2=document.getElementById('nick2').value.trim()||'플레이어 2';
+  startLocal(n1,n2);
+});
+document.getElementById('btnEasy').addEventListener('click',()=>startAI('easy'));
+document.getElementById('btnNormal').addEventListener('click',()=>startAI('normal'));
+document.getElementById('btnHard').addEventListener('click',()=>startAI('hard'));
+document.getElementById('btnCopyCode').addEventListener('click',copyCode);
+document.getElementById('reconnAbort').addEventListener('click',()=>{stopReconn();discPeer();show('sMenu');});
+
+// Enter key support
+['nick1','nick2','nickAI','nickOnline','joinInput'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
+});
+
+function goMenu(){
+  stopConf();discPeer();stopConnHealth();
+  document.getElementById('wo').classList.remove('show');
+  show('sMenu');
+}
+
+function copyCode(){
+  const code=document.getElementById('myCode').textContent;
+  if(code==='----')return;
+  navigator.clipboard?.writeText(code).then(()=>{
+    const btn=document.getElementById('btnCopyCode');
+    btn.textContent='✓';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='복사';btn.classList.remove('copied');},1500);
+  }).catch(()=>showToast(code+' 복사하세요'));
+}
+
+// ══════════════════════════════════════
+// TUTORIAL
+// ══════════════════════════════════════
+let tutPage=0;
+const TUT_PAGES=4;
+document.getElementById('btnTutBack').addEventListener('click',()=>show('sMenu'));
+document.getElementById('tutPrev').addEventListener('click',()=>setTutPage(tutPage-1));
+document.getElementById('tutNext').addEventListener('click',()=>{
+  if(tutPage===TUT_PAGES-1){show('sMenu');}else{setTutPage(tutPage+1);}
+});
+
+function openTutorial(){
+  buildTutBoard1();buildTutDots();setTutPage(0);show('sTutorial');
+}
+function buildTutBoard1(){
+  const b=document.getElementById('tutBoard1');b.innerHTML='';
+  const pat=[[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,0,0,0],[0,1,0,0,0,0],[0,1,1,0,0,0]];
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
+    const cell=document.createElement('div');cell.className='tut-cell';
+    const v=[[0,0,0,0],[0,0,0,0],[1,1,1,1],[0,2,0,0]][r]?.[c]||0;
+    if(v){const s=document.createElement('div');s.className='tut-stone p'+v+(r===2?' win':'');cell.appendChild(s);}
+    b.appendChild(cell);
+  }
+}
+function buildTutDots(){
+  const d=document.getElementById('tutDots');d.innerHTML='';
+  for(let i=0;i<TUT_PAGES;i++){const dot=document.createElement('div');dot.className='tut-dot';d.appendChild(dot);}
+}
+function setTutPage(p){
+  p=Math.max(0,Math.min(TUT_PAGES-1,p));tutPage=p;
+  for(let i=0;i<TUT_PAGES;i++){
+    document.getElementById('ts'+i)?.classList.toggle('active',i===p);
+    document.querySelectorAll('.tut-dot')[i]?.classList.toggle('active',i===p);
+  }
+  document.getElementById('tutPages').textContent=(p+1)+' / '+TUT_PAGES;
+  document.getElementById('tutPrev').style.opacity=p===0?'0.3':'1';
+  document.getElementById('tutPrev').style.pointerEvents=p===0?'none':'auto';
+  document.getElementById('tutNext').textContent=p===TUT_PAGES-1?'완료 ✓':'다음 →';
+}
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+function showToast(msg,type='',dur=2400){
+  const w=document.getElementById('toastWrap');
+  const t=document.createElement('div');t.className='toast'+(type?' '+type:'');t.textContent=msg;
+  w.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},dur);
+}
+
+// ══════════════════════════════════════
+// SOUND
+// ══════════════════════════════════════
+let AC=null;
+function gAC(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC;}
+function tn({type='sine',f=440,f2=null,g=.4,a=.005,d=.08,s=.1,r=.15,t0=0}={}){
+  try{const ctx=gAC(),t=ctx.currentTime+t0;const o=ctx.createOscillator(),e=ctx.createGain(),m=ctx.createGain();m.gain.value=.5;o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+a+d+s);e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+a);e.gain.linearRampToValueAtTime(g*.7,t+a+d);e.gain.setValueAtTime(g*.7,t+a+d+s);e.gain.linearRampToValueAtTime(0,t+a+d+s+r);o.connect(e);e.connect(m);m.connect(ctx.destination);o.start(t);o.stop(t+a+d+s+r+.01);}catch(e){}}
+function ns({g=.15,a=.002,r=.08,t0=0,bf=1000}={}){
+  try{const ctx=gAC(),t=ctx.currentTime+t0;const buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*(a+r+.05)),ctx.sampleRate);const dd=buf.getChannelData(0);for(let i=0;i<dd.length;i++)dd[i]=Math.random()*2-1;const src=ctx.createBufferSource();src.buffer=buf;const fi=ctx.createBiquadFilter();fi.type='bandpass';fi.frequency.value=bf;fi.Q.value=.8;const e=ctx.createGain();e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+a);e.gain.exponentialRampToValueAtTime(.0001,t+a+r);src.connect(fi);fi.connect(e);e.connect(ctx.destination);src.start(t);src.stop(t+a+r+.05);}catch(e){}}
+function sfxFall(row){tn({type:'triangle',f:600-row*40,g:.18,a:.002,d:.03,s:0,r:.04});}
+function sfxLand(row){const d=row/(ROWS-1);ns({g:.25+d*.2,a:.003,r:.12+d*.08,bf:180+d*80});tn({type:'sine',f:120-d*30,f2:60,g:.3,a:.002,d:.06,s:.02,r:.1});}
+function sfxRot(){tn({type:'sawtooth',f:280,f2:420,g:.12,a:.01,d:.15,s:.1,r:.2});ns({g:.08,a:.01,r:.25,bf:600});}
+function sfxSlide(n){for(let i=0;i<Math.min(n,4);i++)tn({type:'sine',f:300+i*60,f2:180,g:.12,a:.005,d:.06,s:.04,r:.1,t0:i*.04});}
+function sfxWin(){[523,659,784,1047].forEach((f,i)=>tn({type:'triangle',f,g:.28,a:.01,d:.1,s:.12,r:.25,t0:i*.12}));setTimeout(()=>ns({g:.1,a:.01,r:.4,bf:2000}),400);}
+function sfxErr(){tn({type:'square',f:180,f2:140,g:.15,a:.005,d:.05,s:.05,r:.1});}
+function sfxConn(){[440,550,660].forEach((f,i)=>tn({type:'sine',f,g:.2,a:.01,d:.05,s:.05,r:.15,t0:i*.08}));}
+
+// ══════════════════════════════════════
+// WEBSOCKET — SERVER-RELAYED CONNECTION
+// ══════════════════════════════════════
+
+// ▼▼▼ 서버 주소를 여기에 입력하세요 ▼▼▼
+const WS_URL = 'wss://flux-6jgi.onrender.com';
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+let ws = null; // WebSocket 인스턴스
+
+// ── 로비 열기 ──
+function openLobby(){
+  show('sOnline');
+  document.getElementById('myCode').textContent='----';
+  setHS('서버에 연결 중...','pulse');
+  document.getElementById('joinStatus').textContent='';
+  document.getElementById('joinInput').value='';
+  initWS('host');
+}
+
+function setHS(msg,dotClass){
+  const dot=document.getElementById('hostDot');
+  const el=document.getElementById('hostStatus');
+  el.innerHTML='';
+  dot.className='conn-dot'+(dotClass?' '+dotClass:'');
+  el.appendChild(dot);
+  const span=document.createElement('span');span.textContent=msg;
+  el.appendChild(span);
+  el.className='lobby-status'+(dotClass==='ok'?' ok':dotClass==='err'?' err':'');
+}
+
+// ── WebSocket 초기화 ──
+function initWS(intentRole){
+  discPeer(); // 기존 연결 정리
+  try{
+    ws=new WebSocket(WS_URL);
+  }catch(e){
+    if(intentRole==='host')setHS('서버 연결 실패','err');
+    else setJS('서버 연결 실패','err');
+    return;
+  }
+  ws.onopen=()=>{
+    if(intentRole==='host'){
+      const nick=document.getElementById('nickOnline').value.trim()||'플레이어';
+      send({t:'create',nick});
+      setHS('서버 연결됨, 방 생성 중...','pulse');
+    }
+    // guest는 joinGame()에서 send('join') 처리
+  };
+  ws.onmessage=(e)=>{
+    let msg;
+    try{msg=JSON.parse(e.data);}catch{return;}
+    handleMsg(msg);
+  };
+  ws.onclose=()=>{
+    updateConnBadge('err');
+    if(!over&&online){showToast('서버 연결이 끊겼습니다','err');attemptReconn();}
+  };
+  ws.onerror=()=>{
+    if(intentRole==='host')setHS('연결 오류','err');
+    else setJS('연결 오류','err');
+  };
+}
+
+// ── 방 참가 ──
+function joinGame(){
+  const code=document.getElementById('joinInput').value.trim().toUpperCase();
+  if(code.length<4){setJS('코드를 입력해주세요','err');return;}
+  setJS('서버에 연결 중...','');
+  initWS('guest');
+  // ws.onopen 이후에 join 메시지를 보내야 하므로 onopen 에서 처리
+  const _origOpen=ws.onopen;
+  ws.onopen=()=>{
+    const nick=document.getElementById('nickOnline').value.trim()||'플레이어';
+    send({t:'join',code,nick});
+    setJS('방에 접속 중...','');
+  };
+}
+
+function setJS(msg,cls){const el=document.getElementById('joinStatus');el.textContent=msg;el.className='lobby-status'+(cls?' '+cls:'');}
+
+// ── 메시지 처리 ──
+function handleMsg(a){
+  switch(a.t){
+    // 서버 → 호스트: 방 생성 완료
+    case'created':
+      document.getElementById('myCode').textContent=a.code;
+      setHS('친구가 접속하길 기다리는 중...','pulse');
+      role='host';
+      break;
+
+    // 서버 → 호스트: 게스트 입장
+    case'opponent_joined':
+      oppNick=a.oppNick||'상대';
+      sfxConn();
+      setHS('✅ 연결됨!','ok');
+      reconnAttempts=0;
+      startConnHealth();
+      setTimeout(()=>startOnline('host'),700);
+      break;
+
+    // 서버 → 게스트: 참가 성공
+    case'joined':
+      oppNick=a.oppNick||'상대';
+      role='guest';
+      sfxConn();
+      setJS('✅ 연결됨!','ok');
+      reconnAttempts=0;
+      startConnHealth();
+      setTimeout(()=>startOnline('guest'),600);
+      break;
+
+    // 서버 오류
+    case'err':
+      if(role==='host')setHS(a.msg,'err');
+      else setJS(a.msg,'err');
+      break;
+
+    // 상대방 퇴장
+    case'opp_left':
+      updateConnBadge('err');
+      if(!over&&online){showToast('상대방이 나갔습니다','err');setTimeout(goMenu,2500);}
+      break;
+
+    // 게임 메시지 릴레이
+    case'drop':applyDrop(a.c,false);break;
+    case'rot':applyRot(a.d,false);break;
+    case'restart':stopConf();document.getElementById('wo').classList.remove('show');initGame();break;
+    case'nick':oppNick=a.name||'상대';updateNickDisplay();break;
+    case'ping':send({t:'pong',ts:a.ts});break;
+    case'pong':connHealth.lastPong=Date.now();updateConnBadge('ok');break;
+    case'sync':if(role==='guest'){grid=a.grid;cur=a.cur;phase=a.phase;firstTurn=a.firstTurn;renderB();updateUI();buildDZ();}break;
+  }
+}
+
+function send(a){
+  if(ws&&ws.readyState===WebSocket.OPEN){
+    try{ws.send(JSON.stringify(a));}catch(e){console.warn('send err',e);}
+  }
+}
+
+// ── 연결 상태 주기 점검 ──
+function startConnHealth(){
+  stopConnHealth();
+  connHealth.lastPong=Date.now();
+  connHealth.timer=setInterval(()=>{
+    if(!ws||ws.readyState!==WebSocket.OPEN)return;
+    const now=Date.now();
+    send({t:'ping',ts:now});
+    if(now-connHealth.lastPong>8000)updateConnBadge('warn');
+    if(now-connHealth.lastPong>15000&&!over){showToast('연결이 불안정합니다','err');attemptReconn();}
+  },3000);
+}
+function stopConnHealth(){if(connHealth.timer){clearInterval(connHealth.timer);connHealth.timer=null;}}
+
+function updateConnBadge(status){
+  const badge=document.getElementById('connBadge');
+  const dot=document.getElementById('connBdot');
+  const label=document.getElementById('connLabel');
+  if(!online){badge.style.display='none';return;}
+  badge.style.display='flex';
+  dot.className='bdot';
+  if(status==='ok'){dot.style.background='var(--ok)';label.textContent='연결됨';}
+  else if(status==='warn'){dot.className='bdot warn';label.textContent='불안정';}
+  else{dot.style.background='var(--err)';label.textContent='끊김';}
+}
+
+// ── 재연결 ──
+function attemptReconn(){
+  if(reconnAttempts>=maxReconn){
+    stopReconn();
+    showToast('재연결 실패. 게임을 종료합니다.','err',3000);
+    setTimeout(goMenu,3000);
+    return;
+  }
+  reconnAttempts++;
+  document.getElementById('reconnOverlay').classList.add('show');
+  document.getElementById('reconnSub').textContent=`재시도 ${reconnAttempts}/${maxReconn}...`;
+  reconnTimer=setTimeout(()=>{
+    if(!ws||ws.readyState!==WebSocket.OPEN){
+      // 새 연결 시도
+      initWS(role||'host');
+      reconnTimer=setTimeout(()=>{
+        if(!ws||ws.readyState!==WebSocket.OPEN){
+          if(reconnAttempts<maxReconn)attemptReconn();
+          else{stopReconn();goMenu();}
+        }else{
+          stopReconn();updateConnBadge('ok');showToast('재연결 성공!','ok');
+          if(role==='host')syncState();
+        }
+      },3000);
+    }else{
+      stopReconn();updateConnBadge('ok');showToast('재연결 성공!','ok');
+      if(role==='host')syncState();
+    }
+  },2000);
+}
+function stopReconn(){
+  document.getElementById('reconnOverlay').classList.remove('show');
+  if(reconnTimer){clearTimeout(reconnTimer);reconnTimer=null;}
+}
+function syncState(){
+  send({t:'sync',grid,cur,phase,firstTurn});
+}
+
+function discPeer(){
+  stopConnHealth();stopReconn();
+  if(ws){try{ws.close();}catch(e){}ws=null;}
+  online=false;role=null;reconnAttempts=0;
+}
+
+function updateNickDisplay(){
+  if(!online)return;
+  const h=role==='host';
+  document.getElementById('p1label').textContent=h?myNick:oppNick;
+  document.getElementById('p2label').textContent=h?oppNick:myNick;
+}
+
+// ══════════════════════════════════════
+// START
+// ══════════════════════════════════════
+function startLocal(n1,n2){
+  online=false;role=null;vsAI=false;
+  document.getElementById('p1name').textContent='P1';
+  document.getElementById('p1label').textContent=n1;
+  document.getElementById('p2name').textContent='P2';
+  document.getElementById('p2label').textContent=n2;
+  document.getElementById('modeTag').innerHTML='';
+  document.getElementById('wRestart').style.display='';
+  document.getElementById('connBadge').style.display='none';
+  show('sGame');initGame();
+}
+
+function startAI(diff){
+  online=false;role=null;vsAI=true;aiDiff=diff;
+  const nick=document.getElementById('nickAI').value.trim()||'플레이어';
+  myNick=nick;
+  const lb={'easy':'쉬움','normal':'보통','hard':'어려움'};
+  document.getElementById('p1name').textContent='나';
+  document.getElementById('p1label').textContent=nick;
+  document.getElementById('p2name').textContent='AI';
+  document.getElementById('p2label').textContent='컴퓨터';
+  document.getElementById('modeTag').innerHTML=`<span class="aitag">AI ${lb[diff]}</span>`;
+  document.getElementById('wRestart').style.display='';
+  document.getElementById('connBadge').style.display='none';
+  show('sGame');initGame();
+}
+
+function startOnline(r){
+  online=true;role=r;vsAI=false;
+  myNick=document.getElementById('nickOnline').value.trim()||'플레이어';
+  const h=r==='host';
+  document.getElementById('p1name').textContent=h?'나':'상대';
+  document.getElementById('p1label').textContent=h?myNick:'...';
+  document.getElementById('p2name').textContent=h?'상대':'나';
+  document.getElementById('p2label').textContent=h?'...':(myNick);
+  document.getElementById('modeTag').innerHTML='<span class="otag">ONLINE</span>';
+  document.getElementById('wRestart').style.display=h?'':'none';
+  updateConnBadge('ok');
+  show('sGame');initGame();
+  // Exchange nicknames
+  setTimeout(()=>send({t:'nick',name:myNick}),500);
+}
+
+// ══════════════════════════════════════
+// GAME
+// ══════════════════════════════════════
+function computeSize(){
+  const app=document.getElementById('app');
+  let usedH=0;
+  ['.ghead','.sbar','.phasebar','.rotrow','.msg'].forEach(sel=>{const el=app.querySelector(sel);if(el)usedH+=el.offsetHeight;});
+  usedH+=6*(parseFloat(getComputedStyle(app).gap)||8);
+  const availH=app.clientHeight-usedH-34-28-4;
+  const availW=app.clientWidth-40;
+  const cs=Math.max(32,Math.min(Math.floor(availH/ROWS),Math.floor(availW/COLS),76));
+  const cg=Math.max(3,Math.min(6,Math.round(cs*.08)));
+  const cp=Math.max(8,Math.min(14,Math.round(cs*.16)));
+  const R=document.documentElement;
+  R.style.setProperty('--cs',cs+'px');R.style.setProperty('--cgap',cg+'px');R.style.setProperty('--cp',cp+'px');
+}
+
+function initGame(){
+  grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  cur=1;phase='drop';over=false;winC=[];anim=false;firstTurn=true;
+  document.getElementById('wo').classList.remove('show');
+  const w=document.getElementById('bwrap');w.classList.remove('rl','rr');w.style.cssText='';
+  requestAnimationFrame(()=>{computeSize();renderB();buildDZ();updateUI();setMsg(myTurn()?'첫 번째 턴! ▼ 열을 선택하세요':'상대방 차례입니다...');});
+}
+window.addEventListener('resize',()=>requestAnimationFrame(()=>{computeSize();renderB();buildDZ();}));
+
+function myTurn(){
+  if(vsAI)return cur===1;
+  if(!online)return true;
+  return(role==='host'&&cur===1)||(role==='guest'&&cur===2);
+}
+
+function renderB(hl=new Set()){
+  const el=document.getElementById('board');el.innerHTML='';
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const cell=document.createElement('div');cell.className='cell';
+    if(hl.has(c))cell.classList.add('ch');
+    const v=grid[r][c];
+    if(v){const s=document.createElement('div');s.className=`stone p${v}`;if(winC.some(w=>w[0]===r&&w[1]===c))s.classList.add('wf');cell.appendChild(s);}
+    el.appendChild(cell);
+  }
+}
+function cOff(bEl,r,c){
+  const cs=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cs'));
+  const cg=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cgap'));
+  const cp=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cp'));
+  const ss=cs*.68;
+  return{left:cp+c*(cs+cg)+(cs-ss)/2,top:cp+r*(cs+cg)+(cs-ss)/2,ss};
+}
+function animGrav(prev,next,done){
+  const bEl=document.getElementById('board');renderB();
+  const cs=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cs'));
+  const ss=cs*.68;
+  const mvs=[];
+  for(let c=0;c<COLS;c++){
+    const p=[],n=[];
+    for(let r=0;r<ROWS;r++){if(prev[r][c])p.push({r,v:prev[r][c]});if(next[r][c])n.push({r,v:next[r][c]});}
+    for(let i=0;i<p.length;i++)if(i<n.length&&p[i].r!==n[i].r)mvs.push({fr:p[i].r,fc:c,tr:n[i].r,tc:c,v:p[i].v});
+  }
+  if(!mvs.length){done();return;}
+  const hid=[];
+  mvs.forEach(m=>{const cells=bEl.querySelectorAll('.cell');const ds=cells[m.tr*COLS+m.tc]?.querySelector('.stone');if(ds){ds.style.opacity='0';hid.push(ds);}});
+  const fls=mvs.map(m=>{
+    const f=cOff(bEl,m.fr,m.fc);
+    const el=document.createElement('div');el.className=`fly p${m.v}`;
+    el.style.cssText=`width:${ss}px;height:${ss}px;left:${f.left}px;top:${f.top}px;transition:top .28s cubic-bezier(.55,0,1,.45),left .28s cubic-bezier(.55,0,1,.45);`;
+    bEl.appendChild(el);return{el,m};
+  });
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    fls.forEach(({el,m})=>{const to=cOff(bEl,m.tr,m.tc);el.style.left=to.left+'px';el.style.top=to.top+'px';});
+    setTimeout(()=>{fls.forEach(({el})=>el.remove());hid.forEach(s=>{if(s)s.style.opacity='';});done();},320);
+  }));
+}
+function buildDZ(){
+  const dz=document.getElementById('dzone');dz.innerHTML='';
+  const en=phase==='drop'&&!over&&!anim&&myTurn();
+  for(let c=0;c<COLS;c++){
+    const a=document.createElement('div');a.className='darr'+(en?'':' off');a.textContent='▼';
+    const col=c;
+    a.addEventListener('click',()=>hDrop(col));
+    a.addEventListener('mouseenter',()=>{if(phase==='drop'&&!anim&&myTurn())hoverC(col,true);});
+    a.addEventListener('mouseleave',()=>{if(phase==='drop'&&!anim&&myTurn())hoverC(col,false);});
+    // Touch support
+    a.addEventListener('touchstart',()=>{if(phase==='drop'&&!anim&&myTurn())hoverC(col,true);},{passive:true});
+    a.addEventListener('touchend',()=>{hoverC(col,false);},{passive:true});
+    dz.appendChild(a);
+  }
+}
+function hoverC(c,on){
+  if(phase!=='drop'||over||anim)return;
+  if(on){
+    const tr=dropRow(c);renderB(new Set([c]));
+    if(tr!==-1){const cells=document.getElementById('board').querySelectorAll('.cell');const cell=cells[tr*COLS+c];if(cell&&!cell.querySelector('.stone')){const p=document.createElement('div');p.className=`stone p${cur} preview`;cell.appendChild(p);}}
+  }else renderB();
+}
+function hDrop(col){
+  if(!myTurn()||anim||over||phase!=='drop')return;
+  if(online)send({t:'drop',c:col});
+  applyDrop(col,true);
+}
+function hRot(dir){
+  if(!myTurn()||anim||over||phase!=='rotate')return;
+  if(online)send({t:'rot',d:dir});
+  applyRot(dir,true);
+}
+function applyDrop(col,local){
+  if(anim||over||phase!=='drop')return;
+  const row=dropRow(col);
+  if(row===-1){if(local)sfxErr();setMsg('해당 열이 꽉 찼습니다!',true);return;}
+  anim=true;buildDZ();
+  if(local)sfxFall(row);
+  const bEl=document.getElementById('board');
+  const cs=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cs'));
+  const ss=cs*.68;
+  const dest=cOff(bEl,row,col);const start=cOff(bEl,0,col);
+  const fl=document.createElement('div');fl.className=`fly p${cur}`;
+  fl.style.cssText=`width:${ss}px;height:${ss}px;left:${start.left}px;top:${start.top-cs}px;transition:none;`;
+  bEl.appendChild(fl);
+  const dur=Math.round(80+(row+1)*38);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    fl.style.transition=`top ${dur}ms cubic-bezier(.4,0,.8,1)`;
+    fl.style.top=dest.top+'px';
+    setTimeout(()=>{
+      fl.remove();grid[row][col]=cur;renderB();sfxLand(row);
+      const stone=bEl.querySelectorAll('.cell')[row*COLS+col]?.querySelector('.stone');
+      if(stone)stone.animate([{transform:'scale(1.15) translateY(-3px)'},{transform:'scale(.94) translateY(2px)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:240,easing:'ease-out'});
+      setTimeout(()=>{
+        const w=checkWin();if(w){winC=w.cells;cur=w.player;renderB();setTimeout(showWin,300);anim=false;return;}
+        if(grid.flat().every(v=>v)){showDraw();anim=false;return;}
+        cur=cur===1?2:1;firstTurn=false;phase='rotate';anim=false;
+        updateUI();buildDZ();
+        setMsg(myTurn()?'보드를 회전하세요 ↺↻':'상대방이 회전 중...');
+        if(vsAI&&cur===2)setTimeout(aiTurn,800);
+      },260);
+    },dur+10);
+  }));
+}
+function applyRot(dir,local){
+  if(anim||over||phase!=='rotate')return;
+  anim=true;setRD(true);
+  if(local)sfxRot();
+  const w=document.getElementById('bwrap');
+  w.classList.add(dir==='left'?'rl':'rr');
+  setTimeout(()=>{
+    const aR=rGrid(grid.map(r=>[...r]),dir);
+    const aG=gGrid(aR.map(r=>[...r]));
+    grid=aG;w.classList.remove('rl','rr');w.style.transform='';
+    let mv=0;
+    for(let c=0;c<COLS;c++){const p=[],n=[];for(let r=0;r<ROWS;r++){if(aR[r][c])p.push(r);if(aG[r][c])n.push(r);}for(let i=0;i<p.length;i++)if(p[i]!==n[i])mv++;}
+    if(mv>0)sfxSlide(mv);
+    animGrav(aR,aG,()=>{
+      anim=false;renderB();
+      const win=checkWin();if(win){winC=win.cells;cur=win.player;renderB();setTimeout(showWin,280);return;}
+      phase='drop';updateUI();buildDZ();
+      setMsg(myTurn()?'▼ 열을 선택하세요':'상대방이 돌을 놓는 중...');
+      if(vsAI&&cur===2)setTimeout(aiTurn,600);
+    });
+  },460);
+}
+function rGrid(g,dir){const R=g.length,C=g[0].length,o=Array.from({length:C},()=>Array(R).fill(0));if(dir==='right')for(let r=0;r<R;r++)for(let c=0;c<C;c++)o[c][R-1-r]=g[r][c];else for(let r=0;r<R;r++)for(let c=0;c<C;c++)o[C-1-c][r]=g[r][c];return o;}
+function gGrid(g){const R=g.length,C=g[0].length,o=Array.from({length:R},()=>Array(C).fill(0));for(let c=0;c<C;c++){let b=R-1;for(let r=R-1;r>=0;r--)if(g[r][c])o[b--][c]=g[r][c];}return o;}
+function dropRow(col){for(let r=ROWS-1;r>=0;r--)if(!grid[r][col])return r;return -1;}
+function checkWin(){
+  const ds=[[0,1],[1,0],[1,1],[1,-1]];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const p=grid[r][c];if(!p)continue;
+    for(const[dr,dc]of ds){
+      const cs=[[r,c]];
+      for(let s=1;s<4;s++){const nr=r+dr*s,nc=c+dc*s;if(nr<0||nr>=ROWS||nc<0||nc>=COLS||grid[nr][nc]!==p)break;cs.push([nr,nc]);}
+      if(cs.length===4)return{cells:cs,player:p};
+    }
+  }
+  return null;
+}
+function updateUI(){
+  ['card1','card2'].forEach((id,i)=>{
+    const p=i+1;
+    document.getElementById(id).classList.toggle('active',cur===p);
+    document.getElementById(`badge${p}`).style.display=cur===p?'':'none';
+  });
+  const isRot=phase==='rotate'&&!over;
+  document.getElementById('ph1').className='pstep'+(firstTurn?'':isRot?' active':' done');
+  document.getElementById('ph2').className='pstep'+(phase==='drop'?' active':'');
+  setRD(!(isRot&&myTurn()));
+}
+function setRD(d){['btnLeft','btnRight'].forEach(id=>document.getElementById(id).classList.toggle('off',d));}
+function setMsg(msg,warn=false){const el=document.getElementById('msg');el.textContent=msg;el.className='msg'+(warn?' w':'');}
+
+// ══════════════════════════════════════
+// AI ENGINE
+// ══════════════════════════════════════
+function evalGrid(g){
+  let score=0;
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const p=g[r][c];if(!p)continue;
+    for(const[dr,dc]of dirs){
+      let cnt=0,block=0;
+      for(let s=0;s<4;s++){const nr=r+dr*s,nc=c+dc*s;if(nr<0||nr>=ROWS||nc<0||nc>=COLS){block++;break;}if(g[nr][nc]===p)cnt++;else if(g[nr][nc]!==0){block++;break;}}
+      if(block<2){const v=[0,1,4,16,256][cnt];score+=p===2?v:-v;}
+    }
+  }
+  return score;
+}
+function simDrop(g,col,player){const ng=g.map(r=>[...r]);for(let r=ROWS-1;r>=0;r--){if(!ng[r][col]){ng[r][col]=player;return ng;}}return null;}
+function simRot(g,dir){return gGrid(rGrid(g.map(r=>[...r]),dir));}
+function minimaxCheckWin(g){const ds=[[0,1],[1,0],[1,1],[1,-1]];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const p=g[r][c];if(!p)continue;for(const[dr,dc]of ds){const cs=[[r,c]];for(let s=1;s<4;s++){const nr=r+dr*s,nc=c+dc*s;if(nr<0||nr>=ROWS||nc<0||nc>=COLS||g[nr][nc]!==p)break;cs.push([nr,nc]);}if(cs.length>=4)return p;}}return 0;}
+function minimax(g,depth,alpha,beta,maxing){
+  const wp=minimaxCheckWin(g);
+  if(wp===2)return 10000+depth;if(wp===1)return -10000-depth;
+  if(g.flat().every(v=>v)||depth===0)return evalGrid(g);
+  if(maxing){let best=-Infinity;for(let c=0;c<COLS;c++){const ng=simDrop(g,c,2);if(!ng)continue;const s=minimax(ng,depth-1,alpha,beta,false);best=Math.max(best,s);alpha=Math.max(alpha,best);if(beta<=alpha)break;}return best;}
+  else{let best=Infinity;for(let c=0;c<COLS;c++){const ng=simDrop(g,c,1);if(!ng)continue;const s=minimax(ng,depth-1,alpha,beta,true);best=Math.min(best,s);beta=Math.min(beta,best);if(beta<=alpha)break;}return best;}
+}
+function aiBestDrop(){
+  const depth={easy:1,normal:2,hard:3}[aiDiff];
+  let best=-Infinity,bestCols=[];
+  if(aiDiff==='easy'&&Math.random()<.35){const valid=[];for(let c=0;c<COLS;c++)if(dropRow(c)!==-1)valid.push(c);return valid[Math.floor(Math.random()*valid.length)]??0;}
+  for(let c=0;c<COLS;c++){const ng=simDrop(grid,c,2);if(!ng)continue;let s=minimax(ng,depth-1,-Infinity,Infinity,false);if(aiDiff==='normal')s+=Math.random()*20-10;if(s>best){best=s;bestCols=[c];}else if(s===best)bestCols.push(c);}
+  return bestCols[Math.floor(Math.random()*bestCols.length)]??0;
+}
+function aiBestRot(){
+  const depth={easy:0,normal:1,hard:2}[aiDiff];
+  let best=-Infinity,bestDir='left';
+  for(const dir of['left','right']){const ng=simRot(grid,dir);const s=depth>0?minimax(ng,depth,-Infinity,Infinity,true):evalGrid(ng);const noisy=s+(aiDiff==='easy'?Math.random()*60-30:aiDiff==='normal'?Math.random()*20-10:0);if(noisy>best){best=noisy;bestDir=dir;}}
+  return bestDir;
+}
+function aiTurn(){
+  if(over||cur!==2)return;
+  document.getElementById('aiThink').classList.add('show');
+  setTimeout(()=>{
+    document.getElementById('aiThink').classList.remove('show');
+    if(phase==='rotate'){const dir=aiBestRot();applyRot(dir,true);}
+    else if(phase==='drop'){const col=aiBestDrop();applyDrop(col,true);}
+  },{easy:900,normal:600,hard:400}[aiDiff]);
+}
+
+// ══════════════════════════════════════
+// CONFETTI
+// ══════════════════════════════════════
+let confId=null;
+function launchConf(c1,c2){
+  const cv=document.getElementById('cc'),ctx=cv.getContext('2d');
+  cv.width=window.innerWidth;cv.height=window.innerHeight;
+  const COLS2=[c1,c2,'#facc15','#4ade80','#f472b6','#a78bfa'],ps=[];
+  [{x:cv.width*.25,y:cv.height*.35},{x:cv.width*.75,y:cv.height*.30},{x:cv.width*.5,y:cv.height*.2}].forEach((b,bi)=>{
+    for(let i=0;i<60;i++){const a=Math.random()*Math.PI*2,sp=4+Math.random()*10,sz=4+Math.random()*7;ps.push({x:b.x,y:b.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-(3+Math.random()*4),rot:Math.random()*360,rv:(Math.random()-.5)*12,w:sz,h:sz*(.4+Math.random()*.6),col:COLS2[Math.floor(Math.random()*COLS2.length)],sh:Math.random()<.5?'r':'c',life:1,dec:.012+Math.random()*.008,born:performance.now()+bi*120});}
+  });
+  function draw(now){
+    ctx.clearRect(0,0,cv.width,cv.height);let alive=false;
+    ps.forEach(p=>{if(now<p.born){alive=true;return;}p.x+=p.vx;p.y+=p.vy;p.vy+=.28;p.vx*=.99;p.rot+=p.rv;p.life-=p.dec;if(p.life<=0)return;alive=true;ctx.save();ctx.globalAlpha=Math.max(0,p.life);ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);ctx.fillStyle=p.col;if(p.sh==='r')ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);else{ctx.beginPath();ctx.arc(0,0,p.w/2,0,Math.PI*2);ctx.fill();}ctx.restore();});
+    if(alive)confId=requestAnimationFrame(draw);else{ctx.clearRect(0,0,cv.width,cv.height);confId=null;}
+  }
+  if(confId)cancelAnimationFrame(confId);confId=requestAnimationFrame(draw);
+  setTimeout(()=>{[{x:cv.width*.15,y:cv.height*.5},{x:cv.width*.85,y:cv.height*.5}].forEach(b=>{for(let i=0;i<40;i++){const a=Math.random()*Math.PI*2,sp=3+Math.random()*8;ps.push({x:b.x,y:b.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-5,rot:Math.random()*360,rv:(Math.random()-.5)*10,w:4+Math.random()*7,h:3+Math.random()*5,col:COLS2[Math.floor(Math.random()*COLS2.length)],sh:Math.random()<.5?'r':'c',life:1,dec:.013+Math.random()*.007,born:performance.now()});}});},600);
+}
+function stopConf(){if(confId){cancelAnimationFrame(confId);confId=null;}const c=document.getElementById('cc');if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+
+// ══════════════════════════════════════
+// WIN
+// ══════════════════════════════════════
+function showWin(){
+  over=true;updateUI();sfxWin();
+  const p1=cur===1;
+  const n1=document.getElementById('p1label').textContent;
+  const n2=document.getElementById('p2label').textContent;
+  const winnerName=p1?n1:n2;
+  launchConf(p1?'#f05a00':'#0096cc',p1?'#facc15':'#a78bfa');
+  document.getElementById('wemoji').textContent=p1?'🔥':'💧';
+  if(vsAI){
+    document.getElementById('wname').textContent=p1?'승리!':'패배...';
+    document.getElementById('wsub').textContent=p1?`${winnerName}가 AI를 이겼습니다!`:`AI가 ${n1}을 이겼습니다`;
+  }else{
+    document.getElementById('wname').textContent=winnerName;
+    document.getElementById('wsub').textContent=p1?'오렌지가 중력을 지배했습니다!':'블루가 중력을 마스터했습니다!';
+  }
+  document.getElementById('wname').style.color=p1?'var(--p1)':'var(--p2)';
+  document.getElementById('wo').classList.add('show');
+}
+function showDraw(){
+  over=true;
+  document.getElementById('wemoji').textContent='🤝';
+  document.getElementById('wname').textContent='무승부';
+  document.getElementById('wname').style.color='var(--muted)';
+  document.getElementById('wsub').textContent='보드가 꽉 찼습니다!';
+  document.getElementById('wo').classList.add('show');
+}
+function restartGame(){
+  stopConf();document.getElementById('wo').classList.remove('show');
+  if(online)send({t:'restart'});
+  initGame();
+}
+</script>
+</body>
+</html>
